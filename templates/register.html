@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Student Registration – TeamFinder{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            <div class="card-custom p-4 p-md-5 shadow-lg border-0">
+                <div class="text-center mb-4">
+                    <div class="avatar-circle mx-auto mb-2 bg-primary-subtle text-primary" style="width: 56px; height: 56px; font-size: 1.5rem;">
+                        <i class="bi bi-person-plus-fill"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark">Create Student Account</h3>
+                    <p class="text-muted small">Join TeamFinder to showcase your skills and collaborate on college projects</p>
+                </div>
+
+                <div id="registerAlert" class="alert alert-danger d-none shadow-sm" role="alert"></div>
+
+                <form id="registerForm">
+                    <div class="row g-3">
+                        <!-- Account Details -->
+                        <div class="col-12">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-person-vcard me-1"></i> Account Credentials
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="name" class="form-label small fw-semibold text-muted">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" placeholder="e.g. Rahul Sharma" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="email" class="form-label small fw-semibold text-muted">College Email Address <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="student@college.edu" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="password" class="form-label small fw-semibold text-muted">Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="At least 6 characters" minlength="6" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="confirm_password" class="form-label small fw-semibold text-muted">Confirm Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Re-enter password" minlength="6" required>
+                        </div>
+
+                        <!-- Academic Details -->
+                        <div class="col-12 mt-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-mortarboard me-1"></i> Academic Profile
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="college" class="form-label small fw-semibold text-muted">College / Institute Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="college" name="college" placeholder="e.g. College of Engineering" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="department" class="form-label small fw-semibold text-muted">Department / Branch <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="department" name="department" placeholder="e.g. Computer Science & Engg." required>
+                        </div>
+
+                        <!-- Technical Skills & Bio -->
+                        <div class="col-12 mt-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-code-slash me-1"></i> Technical Skills & Interests
+                            </h6>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="skills" class="form-label small fw-semibold text-muted">Technical Skills (comma separated) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="skills" name="skills" placeholder="e.g. Python, Flask, React, Bootstrap 5, Docker" required>
+                            <div class="form-text small">Enter skills separated by commas. These will be indexed for teammate discovery.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="interests" class="form-label small fw-semibold text-muted">Areas of Interest (comma separated)</label>
+                            <input type="text" class="form-control" id="interests" name="interests" placeholder="e.g. Web Development, AI/ML, Cloud Computing, IoT">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="bio" class="form-label small fw-semibold text-muted">Short Introduction / Bio</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="Tell potential teammates about your project experience, strengths, and what kind of projects you want to work on..."></textarea>
+                        </div>
+
+                        <div class="col-12 mt-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="termsCheck" required checked>
+                                <label class="form-check-label small text-muted" for="termsCheck">
+                                    I agree to participate in collaborative college project teams respectfully and professionally.
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mt-4">
+                            <button type="submit" id="regSubmitBtn" class="btn btn-primary-custom w-100 py-2 fw-semibold">
+                                <span id="regBtnText"><i class="bi bi-person-check me-1"></i> Complete Registration</span>
+                                <span id="regBtnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4 pt-2 border-top">
+                    <span class="text-muted small">Already have an account? </span>
+                    <a href="{{ url_for('login_page') }}" class="fw-semibold text-primary text-decoration-none">Sign In</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const regForm = document.getElementById('registerForm');
+    const alertBox = document.getElementById('registerAlert');
+    const submitBtn = document.getElementById('regSubmitBtn');
+    const btnText = document.getElementById('regBtnText');
+    const btnSpinner = document.getElementById('regBtnSpinner');
+
+    regForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alertBox.classList.add('d-none');
+
+        const password = document.getElementById('password').value;
+        const confirm_password = document.getElementById('confirm_password').value;
+
+        if (password !== confirm_password) {
+            alertBox.textContent = 'Passwords do not match. Please verify.';
+            alertBox.classList.remove('d-none');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        btnText.classList.add('d-none');
+        btnSpinner.classList.remove('d-none');
+
+        const payload = {
+            name: document.getElementById('name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            password: password,
+            confirm_password: confirm_password,
+            college: document.getElementById('college').value.trim(),
+            department: document.getElementById('department').value.trim(),
+            skills: document.getElementById('skills').value.trim(),
+            interests: document.getElementById('interests').value.trim(),
+            bio: document.getElementById('bio').value.trim()
+        };
+
+        try {
+            const res = await apiRequest('/api/auth/register', 'POST', payload);
+            showToast(res.message, 'success');
+            window.location.href = res.redirect_url || '/dashboard';
+        } catch (err) {
+            alertBox.textContent = err.message || 'Registration failed. Please check your inputs.';
+            alertBox.classList.remove('d-none');
+            submitBtn.disabled = false;
+            btnText.classList.remove('d-none');
+            btnSpinner.classList.add('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user_info.name }}'s Profile – TeamFinder{% endblock %}
+
+{% block layout %}
+<div class="app-wrapper">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-heading">Navigation</div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard_page') }}" class="sidebar-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('projects_page') }}" class="sidebar-link">
+                    <i class="bi bi-folder2-open"></i> Browse Projects
+                </a>
+                <a href="{{ url_for('create_project_page') }}" class="sidebar-link">
+                    <i class="bi bi-plus-square"></i> Create Project
+                </a>
+                <a href="{{ url_for('find_teammates_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-search"></i> Find Teammates
+                </a>
+                <a href="{{ url_for('my_teams_page') }}" class="sidebar-link">
+                    <i class="bi bi-microsoft-teams"></i> My Teams
+                </a>
+                <a href="{{ url_for('requests_page') }}" class="sidebar-link">
+                    <i class="bi bi-envelope-paper"></i> Join Requests
+                </a>
+                <a href="{{ url_for('profile_page') }}" class="sidebar-link {% if is_own_profile %}active{% endif %}">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="app-content">
+        <div class="container-fluid px-0">
+            <!-- Profile Header Card -->
+            <div class="card-custom p-4 p-md-5 mb-4 shadow-sm border-0 position-relative overflow-hidden" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-4">
+                    <div class="d-flex align-items-center gap-4">
+                        <div class="avatar-circle avatar-lg">
+                            {{ user_info.name[0]|upper }}
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h3 class="fw-bold text-dark mb-0">{{ user_info.name }}</h3>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill small">
+                                    {{ user_info.role|capitalize }}
+                                </span>
+                            </div>
+                            <div class="text-muted small mb-1">
+                                <i class="bi bi-envelope text-primary me-1"></i> {{ user_info.email }}
+                            </div>
+                            <div class="text-muted small">
+                                <i class="bi bi-building text-secondary me-1"></i> {{ profile.college if profile and profile.college else 'College of Engineering' }} &bull;
+                                <i class="bi bi-mortarboard text-secondary ms-1 me-1"></i> {{ profile.department if profile and profile.department else 'Computer Science' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if is_own_profile %}
+                        <button type="button" class="btn btn-outline-custom" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                            <i class="bi bi-pencil-square me-1"></i> Edit Profile
+                        </button>
+                    {% endif %}
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Bio & Introduction -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-info-circle text-primary me-1"></i> About & Introduction</h6>
+                    <p class="text-muted mb-0" style="line-height: 1.6;">
+                        {{ profile.bio if profile and profile.bio else 'No introduction provided yet.' }}
+                    </p>
+                </div>
+
+                <!-- Technical Skills -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-code-slash text-success me-1"></i> Technical Skills</h6>
+                    <div>
+                        {% if profile and profile.skills %}
+                            {% for skill in profile.skills %}
+                                <span class="skill-tag highlight">{{ skill }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted small">No technical skills listed yet.</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Areas of Interest -->
+                <div>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-lightbulb text-warning me-1"></i> Areas of Interest</h6>
+                    <div>
+                        {% if profile and profile.interests %}
+                            {% for interest in profile.interests %}
+                                <span class="skill-tag">{{ interest }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted small">No interests specified yet.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabbed Projects Section: Created vs Joined -->
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card-custom p-4 h-100">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-folder-plus text-primary me-2"></i> Created Projects ({{ created_projects|length }})</h5>
+                        {% if created_projects %}
+                            <div class="list-group list-group-flush">
+                                {% for p in created_projects %}
+                                <div class="list-group-item px-0 py-3 border-bottom">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <a href="{{ url_for('project_details_page', project_id=p._id) }}" class="fw-bold text-dark text-decoration-none">
+                                            {{ p.title }}
+                                        </a>
+                                        <span class="badge-status {{ p.status|lower|replace(' ', '-') }}">{{ p.status }}</span>
+                                    </div>
+                                    <p class="text-muted small mb-2 text-truncate">{{ p.description }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small"><i class="bi bi-people me-1"></i> Team Size: {{ p.team_size }}</span>
+                                        <a href="{{ url_for('project_details_page', project_id=p._id) }}" class="btn btn-xs btn-outline-custom">View</a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted small mb-0">No projects created yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card-custom p-4 h-100">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-microsoft-teams text-success me-2"></i> Joined Teams ({{ joined_projects|length }})</h5>
+                        {% if joined_projects %}
+                            <div class="list-group list-group-flush">
+                                {% for p in joined_projects %}
+                                <div class="list-group-item px-0 py-3 border-bottom">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <a href="{{ url_for('project_details_page', project_id=p._id) }}" class="fw-bold text-dark text-decoration-none">
+                                            {{ p.title }}
+                                        </a>
+                                        <span class="badge-status {{ p.status|lower|replace(' ', '-') }}">{{ p.status }}</span>
+                                    </div>
+                                    <p class="text-muted small mb-2 text-truncate">{{ p.description }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small"><i class="bi bi-person me-1"></i> Owner: {{ p.owner_name }}</span>
+                                        <a href="{{ url_for('project_details_page', project_id=p._id) }}" class="btn btn-xs btn-outline-custom">View</a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted small mb-0">Has not joined any external teams yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Edit Profile Modal -->
+{% if is_own_profile %}
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="editProfileModalLabel"><i class="bi bi-pencil-square text-primary me-2"></i> Edit Student Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editProfileForm">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted">Full Name</label>
+                            <input type="text" class="form-control" id="editName" value="{{ user_info.name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted">Email (Read-Only)</label>
+                            <input type="email" class="form-control bg-light" value="{{ user_info.email }}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted">College / Institution</label>
+                            <input type="text" class="form-control" id="editCollege" value="{{ profile.college if profile else '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-muted">Department / Branch</label>
+                            <input type="text" class="form-control" id="editDepartment" value="{{ profile.department if profile else '' }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-muted">Technical Skills (comma separated)</label>
+                            <input type="text" class="form-control" id="editSkills" value="{{ profile.skills|join(', ') if profile and profile.skills else '' }}" required>
+                            <div class="form-text small">e.g. Python, Flask, React, Docker, JavaScript</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-muted">Areas of Interest (comma separated)</label>
+                            <input type="text" class="form-control" id="editInterests" value="{{ profile.interests|join(', ') if profile and profile.interests else '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-muted">Bio / Introduction</label>
+                            <textarea class="form-control" id="editBio" rows="4">{{ profile.bio if profile and profile.bio else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="saveProfileBtn" class="btn btn-primary-custom">
+                        <i class="bi bi-check2 me-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if is_own_profile %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const editForm = document.getElementById('editProfileForm');
+    const saveBtn = document.getElementById('saveProfileBtn');
+
+    if (editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+            const payload = {
+                name: document.getElementById('editName').value.trim(),
+                college: document.getElementById('editCollege').value.trim(),
+                department: document.getElementById('editDepartment').value.trim(),
+                skills: document.getElementById('editSkills').value.trim(),
+                interests: document.getElementById('editInterests').value.trim(),
+                bio: document.getElementById('editBio').value.trim()
+            };
+
+            try {
+                const res = await apiRequest('/api/profiles/me', 'PUT', payload);
+                showToast(res.message, 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } catch (err) {
+                showToast(err.message || 'Error updating profile', 'danger');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-check2 me-1"></i> Save Changes';
+            }
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

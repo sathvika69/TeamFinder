@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}My Teams – TeamFinder{% endblock %}
+
+{% block layout %}
+<div class="app-wrapper">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-heading">Navigation</div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard_page') }}" class="sidebar-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('projects_page') }}" class="sidebar-link">
+                    <i class="bi bi-folder2-open"></i> Browse Projects
+                </a>
+                <a href="{{ url_for('create_project_page') }}" class="sidebar-link">
+                    <i class="bi bi-plus-square"></i> Create Project
+                </a>
+                <a href="{{ url_for('find_teammates_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-search"></i> Find Teammates
+                </a>
+                <a href="{{ url_for('my_teams_page') }}" class="sidebar-link active">
+                    <i class="bi bi-microsoft-teams"></i> My Teams
+                </a>
+                <a href="{{ url_for('requests_page') }}" class="sidebar-link">
+                    <i class="bi bi-envelope-paper"></i> Join Requests
+                </a>
+                <a href="{{ url_for('profile_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="app-content">
+        <div class="container-fluid px-0">
+            <!-- Header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                <div>
+                    <h3 class="fw-bold text-dark mb-1"><i class="bi bi-microsoft-teams text-success me-2"></i> My Active Teams</h3>
+                    <p class="text-muted small mb-0">Collaborate with fellow team members across all projects you lead or participate in.</p>
+                </div>
+                <a href="{{ url_for('projects_page') }}" class="btn btn-outline-custom">
+                    <i class="bi bi-search me-1"></i> Join More Teams
+                </a>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="teamsLoading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2 small">Loading your team rosters...</p>
+            </div>
+
+            <!-- Teams List -->
+            <div id="teamsList" class="d-flex flex-column gap-4 d-none">
+                <!-- Injected via JavaScript -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="teamsEmpty" class="card-custom p-5 text-center border-0 d-none">
+                <div class="stat-icon success mx-auto mb-3">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h4 class="fw-bold">No Active Teams Yet</h4>
+                <p class="text-muted small">You haven't joined or created any project teams yet.</p>
+                <div class="d-flex justify-content-center gap-2 mt-3">
+                    <a href="{{ url_for('create_project_page') }}" class="btn btn-primary-custom">Create a Project</a>
+                    <a href="{{ url_for('projects_page') }}" class="btn btn-outline-custom">Browse Available Projects</a>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const listEl = document.getElementById('teamsList');
+    const loadingEl = document.getElementById('teamsLoading');
+    const emptyEl = document.getElementById('teamsEmpty');
+
+    async function loadMyTeams() {
+        loadingEl.classList.remove('d-none');
+        listEl.classList.add('d-none');
+        emptyEl.classList.add('d-none');
+
+        try {
+            const res = await apiRequest('/api/my-teams');
+            const teams = res.teams || [];
+
+            if (teams.length === 0) {
+                emptyEl.classList.remove('d-none');
+                return;
+            }
+
+            listEl.innerHTML = '';
+            listEl.classList.remove('d-none');
+
+            teams.forEach(t => {
+                const statusClass = t.status.toLowerCase().replace(' ', '-');
+                const isOwner = (t.my_role === 'Owner');
+
+                let rosterHtml = '';
+                (t.roster || []).forEach(m => {
+                    let mSkills = '';
+                    (m.skills || []).slice(0, 3).forEach(s => {
+                        mSkills += `<span class="skill-tag" style="font-size:0.7rem; padding: 0.15rem 0.5rem;">${escapeHtml(s)}</span>`;
+                    });
+
+                    rosterHtml += `
+                        <div class="col-md-6 col-xl-4">
+                            <div class="p-3 bg-light rounded-3 border h-100 d-flex flex-column">
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <div class="avatar-circle" style="width: 38px; height: 38px; font-size: 0.85rem;">
+                                        ${m.name ? m.name[0].toUpperCase() : 'S'}
+                                    </div>
+                                    <div class="flex-grow-1 text-truncate">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <a href="/profile?user_id=${m.user_id}" class="fw-bold text-dark text-decoration-none small text-truncate">
+                                                ${escapeHtml(m.name)}
+                                            </a>
+                                            <span class="badge ${m.role === 'Owner' ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'} small" style="font-size:0.65rem;">
+                                                ${m.role}
+                                            </span>
+                                        </div>
+                                        <div class="text-muted small text-truncate" style="font-size: 0.75rem;">${escapeHtml(m.department || 'Student')}</div>
+                                    </div>
+                                </div>
+                                <div class="small text-muted mb-2 text-truncate">
+                                    <i class="bi bi-envelope me-1"></i> <a href="mailto:${escapeHtml(m.email)}" class="text-decoration-none text-muted">${escapeHtml(m.email)}</a>
+                                </div>
+                                <div class="mt-auto pt-2 border-top">
+                                    ${mSkills || '<span class="text-muted small">No skills specified</span>'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const teamCard = document.createElement('div');
+                teamCard.className = 'card-custom p-4 border-0 shadow-sm bg-white';
+                teamCard.innerHTML = `
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 pb-3 border-bottom mb-3">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge-status ${statusClass}">${t.status}</span>
+                                <span class="badge ${isOwner ? 'bg-primary' : 'bg-success'} rounded-pill small">
+                                    Your Role: ${t.my_role}
+                                </span>
+                            </div>
+                            <h4 class="fw-bold text-dark mb-1">
+                                <a href="/projects/${t._id}" class="text-decoration-none text-dark hover-primary">${escapeHtml(t.title)}</a>
+                            </h4>
+                            <div class="text-muted small">
+                                Project Owner: <span class="fw-semibold text-dark">${escapeHtml(t.owner_name)}</span> &bull; Team Roster: ${t.member_count} / ${t.team_size} Members
+                            </div>
+                        </div>
+
+                        <div>
+                            <a href="/projects/${t._id}" class="btn btn-sm btn-outline-custom">
+                                View Project Workspace <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h6 class="fw-bold small text-muted text-uppercase mb-3"><i class="bi bi-people-fill text-primary me-1"></i> Teammates Roster</h6>
+                        <div class="row g-3">
+                            ${rosterHtml}
+                        </div>
+                    </div>
+                `;
+                listEl.appendChild(teamCard);
+            });
+        } catch (err) {
+            showToast('Failed to load teams: ' + err.message, 'danger');
+        } finally {
+            loadingEl.classList.add('d-none');
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    loadMyTeams();
+});
+</script>
+{% endblock %}

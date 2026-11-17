@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}Administrator Control Center – TeamFinder{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Admin Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-danger text-white px-2 py-1 rounded-pill small">Admin Access</span>
+                <h2 class="fw-bold text-dark mb-0">Platform Administration Console</h2>
+            </div>
+            <p class="text-muted small mb-0">Monitor campus collaboration activity, moderate projects, and manage user accounts.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="refreshAdminBtn" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Metrics
+            </button>
+        </div>
+    </div>
+
+    <!-- Admin Metric Cards -->
+    <div class="row g-3 mb-4" id="statsRow">
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-value" id="statTotalUsers">-</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-value" id="statStudents">-</div>
+                    <div class="stat-label">Registered Students</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-icon info">
+                    <i class="bi bi-folder-check"></i>
+                </div>
+                <div>
+                    <div class="stat-value" id="statProjects">-</div>
+                    <div class="stat-label">Total Projects</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="bi bi-send-check"></i>
+                </div>
+                <div>
+                    <div class="stat-value" id="statRequests">-</div>
+                    <div class="stat-label">Join Requests</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Tabs: User Management & Project Moderation -->
+    <div class="card-custom border-0 shadow-sm bg-white overflow-hidden">
+        <div class="card-header bg-white border-bottom p-3">
+            <ul class="nav nav-tabs card-header-tabs" id="adminTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active fw-semibold" id="users-tab" data-bs-toggle="tab" data-bs-target="#usersPane" type="button" role="tab">
+                        <i class="bi bi-person-lines-fill me-1"></i> User Management (<span id="userCountBadge">0</span>)
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-semibold" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projectsPane" type="button" role="tab">
+                        <i class="bi bi-shield-x me-1"></i> Project Moderation (<span id="projectCountBadge">0</span>)
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="tab-content" id="adminTabContent">
+                <!-- User Management Pane -->
+                <div class="tab-pane fade show active" id="usersPane" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Email</th>
+                                    <th>Department & College</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">Loading user registry...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Project Moderation Pane -->
+                <div class="tab-pane fade" id="projectsPane" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Project Title</th>
+                                    <th>Owner</th>
+                                    <th>Required Skills</th>
+                                    <th>Capacity</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projectsTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">Loading project listings...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const statTotalUsers = document.getElementById('statTotalUsers');
+    const statStudents = document.getElementById('statStudents');
+    const statProjects = document.getElementById('statProjects');
+    const statRequests = document.getElementById('statRequests');
+    const userCountBadge = document.getElementById('userCountBadge');
+    const projectCountBadge = document.getElementById('projectCountBadge');
+    const usersTableBody = document.getElementById('usersTableBody');
+    const projectsTableBody = document.getElementById('projectsTableBody');
+    const refreshBtn = document.getElementById('refreshAdminBtn');
+
+    async function loadStats() {
+        try {
+            const data = await apiRequest('/api/admin/stats');
+            statTotalUsers.textContent = data.total_users;
+            statStudents.textContent = data.total_students;
+            statProjects.textContent = data.total_projects;
+            statRequests.textContent = data.total_requests;
+        } catch (err) {
+            console.error('Error fetching admin stats:', err);
+        }
+    }
+
+    async function loadUsers() {
+        try {
+            const data = await apiRequest('/api/admin/users');
+            const users = data.users || [];
+            userCountBadge.textContent = users.length;
+
+            if (users.length === 0) {
+                usersTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No users found.</td></tr>';
+                return;
+            }
+
+            usersTableBody.innerHTML = '';
+            users.forEach(u => {
+                const isActive = u.is_active !== false;
+                const statusBadge = isActive ?
+                    '<span class="badge bg-success-subtle text-success">Active</span>' :
+                    '<span class="badge bg-danger-subtle text-danger">Deactivated</span>';
+
+                const toggleBtnText = isActive ? 'Deactivate' : 'Activate';
+                const toggleBtnClass = isActive ? 'btn-outline-warning' : 'btn-outline-success';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-circle" style="width:32px; height:32px; font-size:0.8rem;">
+                                ${u.name ? u.name[0].toUpperCase() : 'U'}
+                            </div>
+                            <span class="fw-semibold text-dark">${escapeHtml(u.name)}</span>
+                        </div>
+                    </td>
+                    <td class="small text-muted">${escapeHtml(u.email)}</td>
+                    <td class="small">
+                        <div class="text-dark fw-medium">${escapeHtml(u.department || '-')}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">${escapeHtml(u.college || '-')}</div>
+                    </td>
+                    <td>
+                        <span class="badge ${u.role === 'admin' ? 'bg-danger-subtle text-danger' : 'bg-primary-subtle text-primary'}">
+                            ${u.role}
+                        </span>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td class="small text-muted">${u.created_at ? u.created_at.substring(0, 10) : '-'}</td>
+                    <td class="text-end">
+                        ${u.role !== 'admin' ? `
+                            <button class="btn btn-xs ${toggleBtnClass} btn-toggle-user me-1" data-id="${u._id}">
+                                ${toggleBtnText}
+                            </button>
+                            <button class="btn btn-xs btn-outline-danger btn-delete-user" data-id="${u._id}" data-name="${escapeHtml(u.name)}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        ` : '<span class="text-muted small fst-italic">Protected Admin</span>'}
+                    </td>
+                `;
+                usersTableBody.appendChild(row);
+            });
+
+            // Bind user action buttons
+            document.querySelectorAll('.btn-toggle-user').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const uid = btn.getAttribute('data-id');
+                    btn.disabled = true;
+                    try {
+                        const res = await apiRequest(`/api/admin/users/${uid}/toggle-status`, 'POST');
+                        showToast(res.message, 'info');
+                        loadUsers();
+                    } catch (err) {
+                        showToast(err.message || 'Action failed', 'danger');
+                        btn.disabled = false;
+                    }
+                });
+            });
+
+            document.querySelectorAll('.btn-delete-user').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const uid = btn.getAttribute('data-id');
+                    const uname = btn.getAttribute('data-name');
+                    if (confirm(`Are you sure you want to completely delete user "${uname}"? All projects, requests, and team memberships will be deleted.`)) {
+                        btn.disabled = true;
+                        try {
+                            const res = await apiRequest(`/api/admin/users/${uid}`, 'DELETE');
+                            showToast(res.message, 'success');
+                            loadUsers();
+                            loadStats();
+                        } catch (err) {
+                            showToast(err.message || 'Failed to delete user', 'danger');
+                            btn.disabled = false;
+                        }
+                    }
+                });
+            });
+
+        } catch (err) {
+            usersTableBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${err.message}</td></tr>`;
+        }
+    }
+
+    async function loadProjects() {
+        try {
+            const data = await apiRequest('/api/admin/projects');
+            const projects = data.projects || [];
+            projectCountBadge.textContent = projects.length;
+
+            if (projects.length === 0) {
+                projectsTableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No projects found.</td></tr>';
+                return;
+            }
+
+            projectsTableBody.innerHTML = '';
+            projects.forEach(p => {
+                let skillsHtml = '';
+                (p.skills_required || []).slice(0, 3).forEach(s => {
+                    skillsHtml += `<span class="skill-tag" style="font-size:0.7rem; padding:0.15rem 0.5rem;">${escapeHtml(s)}</span>`;
+                });
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <a href="/projects/${p._id}" class="fw-semibold text-dark text-decoration-none hover-primary">${escapeHtml(p.title)}</a>
+                    </td>
+                    <td class="small">
+                        <div class="fw-medium text-dark">${escapeHtml(p.owner_name)}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">${escapeHtml(p.owner_email)}</div>
+                    </td>
+                    <td>${skillsHtml}</td>
+                    <td class="small fw-semibold text-muted">${p.members_count} / ${p.team_size}</td>
+                    <td>
+                        <span class="badge-status ${p.status.toLowerCase().replace(' ', '-')}">${p.status}</span>
+                    </td>
+                    <td class="small text-muted">${p.created_at ? p.created_at.substring(0, 10) : '-'}</td>
+                    <td class="text-end">
+                        <a href="/projects/${p._id}" class="btn btn-xs btn-outline-primary me-1"><i class="bi bi-eye"></i></a>
+                        <button class="btn btn-xs btn-outline-danger btn-delete-project" data-id="${p._id}" data-title="${escapeHtml(p.title)}">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </td>
+                `;
+                projectsTableBody.appendChild(row);
+            });
+
+            document.querySelectorAll('.btn-delete-project').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const pid = btn.getAttribute('data-id');
+                    const title = btn.getAttribute('data-title');
+                    if (confirm(`Remove project "${title}"? This cannot be undone.`)) {
+                        btn.disabled = true;
+                        try {
+                            const res = await apiRequest(`/api/projects/${pid}`, 'DELETE');
+                            showToast(res.message, 'success');
+                            loadProjects();
+                            loadStats();
+                        } catch (err) {
+                            showToast(err.message || 'Failed to remove project', 'danger');
+                            btn.disabled = false;
+                        }
+                    }
+                });
+            });
+
+        } catch (err) {
+            projectsTableBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${err.message}</td></tr>`;
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    refreshBtn.addEventListener('click', () => {
+        loadStats();
+        loadUsers();
+        loadProjects();
+        showToast('Metrics updated!', 'info');
+    });
+
+    document.getElementById('users-tab').addEventListener('shown.bs.tab', loadUsers);
+    document.getElementById('projects-tab').addEventListener('shown.bs.tab', loadProjects);
+
+    // Initial load
+    loadStats();
+    loadUsers();
+    loadProjects();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Find Teammates – TeamFinder{% endblock %}
+
+{% block layout %}
+<div class="app-wrapper">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-heading">Navigation</div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard_page') }}" class="sidebar-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('projects_page') }}" class="sidebar-link">
+                    <i class="bi bi-folder2-open"></i> Browse Projects
+                </a>
+                <a href="{{ url_for('create_project_page') }}" class="sidebar-link">
+                    <i class="bi bi-plus-square"></i> Create Project
+                </a>
+                <a href="{{ url_for('find_teammates_page') }}" class="sidebar-link active">
+                    <i class="bi bi-person-search"></i> Find Teammates
+                </a>
+                <a href="{{ url_for('my_teams_page') }}" class="sidebar-link">
+                    <i class="bi bi-microsoft-teams"></i> My Teams
+                </a>
+                <a href="{{ url_for('requests_page') }}" class="sidebar-link">
+                    <i class="bi bi-envelope-paper"></i> Join Requests
+                </a>
+                <a href="{{ url_for('profile_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="app-content">
+        <div class="container-fluid px-0">
+            <!-- Header -->
+            <div class="mb-4">
+                <h3 class="fw-bold text-dark mb-1"><i class="bi bi-person-search text-primary me-2"></i> Discover Potential Teammates</h3>
+                <p class="text-muted small">Search students by name, branch, or technical stack to recruit talent for your projects.</p>
+            </div>
+
+            <!-- Search & Skill Filters -->
+            <div class="card-custom p-3 p-md-4 mb-4 border-0 shadow-sm bg-white">
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label small fw-semibold text-muted">Search Student or Department</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="studentSearchInput" class="form-control border-start-0 ps-0" placeholder="Search by student name, college, department, or keywords...">
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold text-muted">Filter by Required Skill</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-filter-circle text-muted"></i></span>
+                            <input type="text" id="studentSkillFilter" class="form-control border-start-0 ps-0" placeholder="e.g. Python, React, NLP, Docker...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="studentsLoading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading students...</span>
+                </div>
+                <p class="text-muted mt-2 small">Searching student profiles...</p>
+            </div>
+
+            <!-- Student Cards Grid -->
+            <div id="studentsGrid" class="row g-4 d-none">
+                <!-- Injected via JavaScript -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="noStudentsAlert" class="card-custom p-5 text-center border-0 d-none">
+                <div class="stat-icon info mx-auto mb-3">
+                    <i class="bi bi-person-x"></i>
+                </div>
+                <h4 class="fw-bold">No Students Found</h4>
+                <p class="text-muted">No student profiles match your search criteria. Try a different skill or clear the search input.</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Student Detail Modal -->
+<div class="modal fade" id="studentDetailModal" tabindex="-1" aria-labelledby="studentDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div id="modalStudentAvatar" class="avatar-circle avatar-lg mx-auto mb-3"></div>
+                <h4 id="modalStudentName" class="fw-bold mb-1 text-dark"></h4>
+                <div id="modalStudentEmail" class="text-muted small mb-2"></div>
+                <div id="modalStudentCollege" class="text-secondary small fw-medium mb-3"></div>
+
+                <div class="p-3 bg-light rounded-3 text-start mb-3">
+                    <h6 class="fw-bold text-dark small mb-1">About / Bio</h6>
+                    <p id="modalStudentBio" class="text-muted small mb-0"></p>
+                </div>
+
+                <div class="text-start mb-3">
+                    <h6 class="fw-bold text-dark small mb-1">Technical Skills</h6>
+                    <div id="modalStudentSkills"></div>
+                </div>
+
+                <div class="text-start">
+                    <h6 class="fw-bold text-dark small mb-1">Interests</h6>
+                    <div id="modalStudentInterests"></div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 justify-content-center">
+                <a id="modalFullProfileBtn" href="#" class="btn btn-primary-custom w-100">
+                    <i class="bi bi-person-circle me-1"></i> View Full Profile
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('studentSearchInput');
+    const skillInput = document.getElementById('studentSkillFilter');
+    const studentsGrid = document.getElementById('studentsGrid');
+    const loadingEl = document.getElementById('studentsLoading');
+    const emptyEl = document.getElementById('noStudentsAlert');
+
+    let debounceTimer;
+
+    async function loadStudents() {
+        loadingEl.classList.remove('d-none');
+        studentsGrid.classList.add('d-none');
+        emptyEl.classList.add('d-none');
+
+        const q = searchInput.value.trim();
+        const skill = skillInput.value.trim();
+
+        const params = new URLSearchParams();
+        if (q) params.append('q', q);
+        if (skill) params.append('skill', skill);
+
+        try {
+            const data = await apiRequest(`/api/students?${params.toString()}`);
+            renderStudents(data.students);
+        } catch (err) {
+            showToast('Failed to load students: ' + err.message, 'danger');
+        } finally {
+            loadingEl.classList.add('d-none');
+        }
+    }
+
+    function renderStudents(students) {
+        if (!students || students.length === 0) {
+            emptyEl.classList.remove('d-none');
+            return;
+        }
+
+        studentsGrid.innerHTML = '';
+        studentsGrid.classList.remove('d-none');
+
+        students.forEach(item => {
+            const p = item.profile || {};
+            const isMe = item.is_me;
+            const skills = p.skills || [];
+
+            let skillsHtml = '';
+            skills.slice(0, 4).forEach(s => {
+                skillsHtml += `<span class="skill-tag highlight">${escapeHtml(s)}</span>`;
+            });
+            if (skills.length > 4) {
+                skillsHtml += `<span class="skill-tag text-muted">+${skills.length - 4}</span>`;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'col-md-6 col-xl-4';
+            card.innerHTML = `
+                <div class="card-custom card-interactive p-4 h-100 d-flex flex-column">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <div class="avatar-circle">
+                            ${p.name ? p.name[0].toUpperCase() : 'S'}
+                        </div>
+                        <div class="flex-grow-1 text-truncate">
+                            <div class="d-flex align-items-center gap-1">
+                                <h6 class="fw-bold text-dark mb-0 text-truncate">${escapeHtml(p.name || 'Student')}</h6>
+                                ${isMe ? '<span class="badge bg-secondary-subtle text-secondary" style="font-size:0.65rem;">You</span>' : ''}
+                            </div>
+                            <div class="text-muted small text-truncate">${escapeHtml(p.department || 'Computer Science')}</div>
+                            <div class="text-muted small text-truncate" style="font-size: 0.75rem;">${escapeHtml(p.college || 'Engineering College')}</div>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small flex-grow-1 mb-3" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        ${escapeHtml(p.bio || 'No bio provided.')}
+                    </p>
+
+                    <div class="mb-3">
+                        <div class="text-muted small fw-medium mb-1">Key Skills:</div>
+                        <div>${skillsHtml || '<span class="text-muted small">None listed</span>'}</div>
+                    </div>
+
+                    <div class="border-top pt-3 mt-auto d-flex justify-content-between align-items-center">
+                        <span class="small text-muted"><i class="bi bi-folder-check me-1"></i> ${item.created_projects_count} Projects</span>
+                        <div class="d-flex gap-2">
+                            <a href="/profile?user_id=${p.user_id}" class="btn btn-sm btn-outline-custom">
+                                View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            studentsGrid.appendChild(card);
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(loadStudents, 350);
+    });
+
+    skillInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(loadStudents, 350);
+    });
+
+    loadStudents();
+});
+</script>
+{% endblock %}

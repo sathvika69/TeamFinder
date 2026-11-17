@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard – TeamFinder{% endblock %}
+
+{% block layout %}
+<div class="app-wrapper">
+    <!-- App Sidebar -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-heading">Navigation</div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard_page') }}" class="sidebar-link active">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('projects_page') }}" class="sidebar-link">
+                    <i class="bi bi-folder2-open"></i> Browse Projects
+                </a>
+                <a href="{{ url_for('create_project_page') }}" class="sidebar-link">
+                    <i class="bi bi-plus-square"></i> Create Project
+                </a>
+                <a href="{{ url_for('find_teammates_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-search"></i> Find Teammates
+                </a>
+                <a href="{{ url_for('my_teams_page') }}" class="sidebar-link">
+                    <i class="bi bi-microsoft-teams"></i> My Teams
+                </a>
+                <a href="{{ url_for('requests_page') }}" class="sidebar-link">
+                    <i class="bi bi-envelope-paper"></i> Join Requests
+                    {% if stats.pending_received_count > 0 %}
+                        <span class="badge bg-danger rounded-pill ms-auto">{{ stats.pending_received_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('profile_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            </nav>
+        </div>
+
+        <div class="p-3 bg-light rounded-3 border">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="avatar-circle" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                    {{ current_user.name[0]|upper }}
+                </div>
+                <div class="text-truncate">
+                    <div class="fw-bold small text-truncate">{{ current_user.name }}</div>
+                    <div class="text-muted small text-truncate" style="font-size: 0.75rem;">{{ current_user.email }}</div>
+                </div>
+            </div>
+            <a href="{{ url_for('api_logout') }}" class="btn btn-outline-danger btn-sm w-100 action-logout">
+                <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="app-content">
+        <!-- Header -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">Student Dashboard</h3>
+                <p class="text-muted small mb-0">Welcome back, <span class="fw-semibold text-primary">{{ current_user.name }}</span>! Here is your project collaboration overview.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('create_project_page') }}" class="btn btn-primary-custom d-flex align-items-center gap-2">
+                    <i class="bi bi-plus-lg"></i> Post New Project
+                </a>
+            </div>
+        </div>
+
+        <!-- 6 Live Metric Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-xl-4">
+                <div class="stat-card">
+                    <div class="stat-icon primary">
+                        <i class="bi bi-folder-check"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.total_projects }}</div>
+                        <div class="stat-label">Total Available Projects</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-xl-4">
+                <div class="stat-card">
+                    <div class="stat-icon success">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.total_students }}</div>
+                        <div class="stat-label">Total Registered Students</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-xl-4">
+                <div class="stat-card">
+                    <div class="stat-icon info">
+                        <i class="bi bi-folder-plus"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.my_created_count }}</div>
+                        <div class="stat-label">My Created Projects</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-xl-4">
+                <div class="stat-card">
+                    <div class="stat-icon success">
+                        <i class="bi bi-microsoft-teams"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.my_joined_count }}</div>
+                        <div class="stat-label">My Joined Teams</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-xl-4">
+                <div class="stat-card">
+                    <div class="stat-icon warning">
+                        <i class="bi bi-inbox-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.pending_received_count }}</div>
+                        <div class="stat-label">Pending Requests Received</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-xl-4">
+                <div class="stat-card">
+                    <div class="stat-icon primary">
+                        <i class="bi bi-send-check-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.pending_sent_count }}</div>
+                        <div class="stat-label">Pending Requests Sent</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: My Projects & Recent Projects -->
+        <div class="row g-4">
+            <!-- Left: Recently Added Projects -->
+            <div class="col-lg-7">
+                <div class="card-custom p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-primary me-2"></i> Recently Added Projects</h5>
+                        <a href="{{ url_for('projects_page') }}" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                    </div>
+
+                    {% if recent_projects %}
+                        <div class="list-group list-group-flush">
+                            {% for p in recent_projects %}
+                            <div class="list-group-item px-0 py-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <a href="{{ url_for('project_details_page', project_id=p._id) }}" class="fw-bold text-dark text-decoration-none hover-primary">
+                                        {{ p.title }}
+                                    </a>
+                                    <span class="badge-status {{ p.status|lower|replace(' ', '-') }}">{{ p.status }}</span>
+                                </div>
+                                <p class="text-muted small mb-2 text-truncate" style="max-width: 90%;">{{ p.description }}</p>
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div>
+                                        {% for s in p.skills_required[:3] %}
+                                            <span class="skill-tag" style="font-size: 0.72rem;">{{ s }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    <span class="text-muted small"><i class="bi bi-person me-1"></i> {{ p.owner_name }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-2"></i>
+                            <p class="mt-2 mb-0">No recent projects published yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right: My Created Projects Quick Access -->
+            <div class="col-lg-5">
+                <div class="card-custom p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-person-workspace text-success me-2"></i> My Projects</h5>
+                        <a href="{{ url_for('create_project_page') }}" class="btn btn-sm btn-outline-custom">
+                            <i class="bi bi-plus"></i> New
+                        </a>
+                    </div>
+
+                    {% if my_projects %}
+                        <div class="d-flex flex-column gap-3">
+                            {% for p in my_projects %}
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark small text-truncate" style="max-width: 75%;">{{ p.title }}</span>
+                                    <span class="badge bg-secondary-subtle text-secondary small">{{ p.status }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                                    <span class="text-muted small"><i class="bi bi-people me-1"></i> Team Size: {{ p.team_size }}</span>
+                                    <a href="{{ url_for('project_details_page', project_id=p._id) }}" class="btn btn-xs btn-primary-custom" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                                        Manage
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted bg-light rounded-3">
+                            <i class="bi bi-folder-plus fs-2 text-muted"></i>
+                            <p class="mt-2 mb-3 small">You have not created any projects yet.</p>
+                            <a href="{{ url_for('create_project_page') }}" class="btn btn-sm btn-primary-custom">
+                                Create Your First Project
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <!-- Quick Action Links -->
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="fw-bold small text-muted text-uppercase mb-2">Quick Shortcuts</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <a href="{{ url_for('find_teammates_page') }}" class="btn btn-light border w-100 text-start py-2 small fw-medium">
+                                    <i class="bi bi-search text-primary me-1"></i> Find Peers
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ url_for('requests_page') }}" class="btn btn-light border w-100 text-start py-2 small fw-medium">
+                                    <i class="bi bi-envelope text-warning me-1"></i> Join Requests
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

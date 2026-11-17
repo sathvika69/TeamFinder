@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Project – TeamFinder{% endblock %}
+
+{% block layout %}
+<div class="app-wrapper">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-heading">Navigation</div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard_page') }}" class="sidebar-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('projects_page') }}" class="sidebar-link">
+                    <i class="bi bi-folder2-open"></i> Browse Projects
+                </a>
+                <a href="{{ url_for('create_project_page') }}" class="sidebar-link active">
+                    <i class="bi bi-plus-square"></i> Create Project
+                </a>
+                <a href="{{ url_for('find_teammates_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-search"></i> Find Teammates
+                </a>
+                <a href="{{ url_for('my_teams_page') }}" class="sidebar-link">
+                    <i class="bi bi-microsoft-teams"></i> My Teams
+                </a>
+                <a href="{{ url_for('requests_page') }}" class="sidebar-link">
+                    <i class="bi bi-envelope-paper"></i> Join Requests
+                </a>
+                <a href="{{ url_for('profile_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="app-content">
+        <div class="container-fluid" style="max-width: 900px;">
+            <div class="card-custom p-4 p-md-5 shadow-sm border-0 bg-white">
+                <div class="mb-4">
+                    <h3 class="fw-bold text-dark mb-1"><i class="bi bi-folder-plus text-primary me-2"></i> Post a Collaborative Project</h3>
+                    <p class="text-muted small">Specify your project scope, prerequisites, and required team members.</p>
+                </div>
+
+                <div id="createProjectAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="createProjectForm">
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <label for="projectTitle" class="form-label fw-semibold small text-muted">Project Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" id="projectTitle" placeholder="e.g. Smart Campus Energy Monitoring System" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="projectDescription" class="form-label fw-semibold small text-muted">Detailed Project Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="projectDescription" rows="5" placeholder="Explain the problem statement, objectives, expected deliverables, architecture, and technology stack..." required></textarea>
+                            <div class="form-text small">A clear description helps attract suitable teammates faster.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="teamSize" class="form-label fw-semibold small text-muted">Total Team Capacity (including yourself) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="teamSize" min="2" max="20" value="4" required>
+                            <div class="form-text small">Recommended size for college / capstone teams: 3-5 members.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="projectStatus" class="form-label fw-semibold small text-muted">Project Status</label>
+                            <select id="projectStatus" class="form-select">
+                                <option value="Open" selected>Open (Seeking Teammates)</option>
+                                <option value="In Progress">In Progress</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="skillsRequired" class="form-label fw-semibold small text-muted">Required Technical Skills (comma separated) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="skillsRequired" placeholder="e.g. Python, Flask, React, Bootstrap 5, Docker" required>
+                            
+                            <!-- Quick add skill badges -->
+                            <div class="mt-2">
+                                <span class="small text-muted me-2">Quick Add:</span>
+                                <div class="d-inline-flex flex-wrap gap-1 mt-1">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">Python</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">Flask</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">SQL</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">React</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">JavaScript</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">FastAPI</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">Docker</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">UI/UX</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-skill">Machine Learning</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 pt-3 border-top d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('projects_page') }}" class="btn btn-light">Cancel</a>
+                            <button type="submit" id="submitProjectBtn" class="btn btn-primary-custom px-4">
+                                <span id="createBtnText"><i class="bi bi-check-circle me-1"></i> Publish Project</span>
+                                <span id="createBtnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('createProjectForm');
+    const alertBox = document.getElementById('createProjectAlert');
+    const submitBtn = document.getElementById('submitProjectBtn');
+    const btnText = document.getElementById('createBtnText');
+    const btnSpinner = document.getElementById('createBtnSpinner');
+    const skillsInput = document.getElementById('skillsRequired');
+
+    // Quick add skill buttons
+    document.querySelectorAll('.btn-quick-skill').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const skillName = btn.textContent.trim();
+            const current = skillsInput.value.trim();
+            if (!current) {
+                skillsInput.value = skillName;
+            } else {
+                const skillsArr = current.split(',').map(s => s.trim().toLowerCase());
+                if (!skillsArr.includes(skillName.toLowerCase())) {
+                    skillsInput.value = current + ', ' + skillName;
+                }
+            }
+        });
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alertBox.classList.add('d-none');
+        submitBtn.disabled = true;
+        btnText.classList.add('d-none');
+        btnSpinner.classList.remove('d-none');
+
+        const payload = {
+            title: document.getElementById('projectTitle').value.trim(),
+            description: document.getElementById('projectDescription').value.trim(),
+            team_size: parseInt(document.getElementById('teamSize').value),
+            status: document.getElementById('projectStatus').value,
+            skills_required: skillsInput.value.trim()
+        };
+
+        try {
+            const res = await apiRequest('/api/projects', 'POST', payload);
+            showToast(res.message, 'success');
+            window.location.href = res.redirect_url || '/projects';
+        } catch (err) {
+            alertBox.textContent = err.message || 'Failed to create project.';
+            alertBox.classList.remove('d-none');
+            submitBtn.disabled = false;
+            btnText.classList.remove('d-none');
+            btnSpinner.classList.add('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}

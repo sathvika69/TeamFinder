@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Projects – TeamFinder{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Browse Collaborative Projects</h2>
+            <p class="text-muted small mb-0">Explore academic and capstone projects seeking teammates.</p>
+        </div>
+        {% if current_user and current_user.role == 'student' %}
+            <a href="{{ url_for('create_project_page') }}" class="btn btn-primary-custom d-flex align-items-center gap-2">
+                <i class="bi bi-plus-lg"></i> Post a Project
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="card-custom p-3 p-md-4 mb-4 border-0 shadow-sm">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold text-muted">Search Keyword</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="projectSearchInput" class="form-control border-start-0 ps-0" placeholder="Search by title, description or owner...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted">Filter by Skill</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-code-slash text-muted"></i></span>
+                    <input type="text" id="skillFilterInput" class="form-control border-start-0 ps-0" placeholder="e.g. Python, React, Flask...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted">Status</label>
+                <select id="statusFilterSelect" class="form-select">
+                    <option value="all">All Statuses</option>
+                    <option value="Open" selected>Open Only</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Project Cards Grid -->
+    <div id="projectsLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading projects...</span>
+        </div>
+        <p class="text-muted mt-2 small">Fetching projects...</p>
+    </div>
+
+    <div id="projectsGrid" class="row g-4 d-none">
+        <!-- Rendered dynamically via JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="noProjectsAlert" class="card-custom p-5 text-center border-0 d-none">
+        <div class="stat-icon info mx-auto mb-3">
+            <i class="bi bi-folder-x"></i>
+        </div>
+        <h4 class="fw-bold">No Projects Found</h4>
+        <p class="text-muted">No projects matched your search criteria. Try modifying your filters or search keywords.</p>
+        <button id="resetFiltersBtn" class="btn btn-outline-custom mx-auto">Reset Filters</button>
+    </div>
+</div>
+
+<!-- Send Join Request Modal -->
+<div class="modal fade" id="joinRequestModal" tabindex="-1" aria-labelledby="joinRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="joinRequestModalLabel">
+                    <i class="bi bi-envelope-paper text-primary me-2"></i> Request to Join Team
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="joinRequestForm">
+                <input type="hidden" id="modalProjectId">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Project</label>
+                        <div id="modalProjectTitle" class="fw-semibold text-dark"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="requestMessage" class="form-label small fw-semibold text-muted">Introduction Message to Project Owner</label>
+                        <textarea class="form-control" id="requestMessage" rows="4" placeholder="Mention which skills you can contribute, your past project experience, and why you are interested in this project..."></textarea>
+                        <div class="form-text small">The project owner will review your student profile and message before accepting.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="modalSubmitBtn" class="btn btn-primary-custom">
+                        <span id="reqBtnText"><i class="bi bi-send me-1"></i> Send Request</span>
+                        <span id="reqBtnSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('projectSearchInput');
+    const skillInput = document.getElementById('skillFilterInput');
+    const statusSelect = document.getElementById('statusFilterSelect');
+    const projectsGrid = document.getElementById('projectsGrid');
+    const projectsLoading = document.getElementById('projectsLoading');
+    const noProjectsAlert = document.getElementById('noProjectsAlert');
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+
+    let debounceTimer;
+
+    async function loadProjects() {
+        projectsLoading.classList.remove('d-none');
+        projectsGrid.classList.add('d-none');
+        noProjectsAlert.classList.add('d-none');
+
+        const q = searchInput.value.trim();
+        const skill = skillInput.value.trim();
+        const status = statusSelect.value;
+
+        const params = new URLSearchParams();
+        if (q) params.append('q', q);
+        if (skill) params.append('skill', skill);
+        if (status) params.append('status', status);
+
+        try {
+            const data = await apiRequest(`/api/projects?${params.toString()}`);
+            renderProjects(data.projects);
+        } catch (err) {
+            showToast('Failed to load projects: ' + err.message, 'danger');
+        } finally {
+            projectsLoading.classList.add('d-none');
+        }
+    }
+
+    function renderProjects(projects) {
+        if (!projects || projects.length === 0) {
+            noProjectsAlert.classList.remove('d-none');
+            return;
+        }
+
+        projectsGrid.innerHTML = '';
+        projectsGrid.classList.remove('d-none');
+
+        projects.forEach(p => {
+            const pct = Math.min(100, Math.round((p.current_members / p.team_size) * 100));
+            const statusClass = p.status.toLowerCase().replace(' ', '-');
+            
+            // Generate skill tags HTML
+            let skillsHtml = '';
+            (p.skills_required || []).forEach(s => {
+                skillsHtml += `<span class="skill-tag">${escapeHtml(s)}</span>`;
+            });
+
+            // Action button determination
+            let actionBtn = '';
+            if (p.is_owner) {
+                actionBtn = `<a href="/projects/${p._id}" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-gear me-1"></i> Manage Project</a>`;
+            } else if (p.is_member) {
+                actionBtn = `<span class="badge bg-success-subtle text-success p-2 w-100 text-center"><i class="bi bi-check-circle me-1"></i> Team Member</span>`;
+            } else if (p.has_pending_request) {
+                actionBtn = `<button class="btn btn-sm btn-outline-warning w-100" disabled><i class="bi bi-clock me-1"></i> Request Pending</button>`;
+            } else if (p.is_full) {
+                actionBtn = `<button class="btn btn-sm btn-secondary w-100" disabled><i class="bi bi-lock me-1"></i> Team Full</button>`;
+            } else if (p.status !== 'Open') {
+                actionBtn = `<a href="/projects/${p._id}" class="btn btn-sm btn-outline-secondary w-100">View Details</a>`;
+            } else {
+                actionBtn = `
+                    <button class="btn btn-sm btn-primary-custom w-100 btn-request-join" 
+                        data-id="${p._id}" 
+                        data-title="${escapeHtml(p.title)}">
+                        <i class="bi bi-person-plus me-1"></i> Request to Join
+                    </button>
+                `;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'col-md-6 col-lg-4';
+            card.innerHTML = `
+                <div class="card-custom card-interactive p-4 h-100 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge-status ${statusClass}">${p.status}</span>
+                        <span class="small fw-semibold text-muted">
+                            <i class="bi bi-people me-1"></i> ${p.current_members} / ${p.team_size} Members
+                        </span>
+                    </div>
+
+                    <div class="capacity-bar mb-3">
+                        <div class="capacity-fill ${p.is_full ? 'full' : ''}" style="width: ${pct}%"></div>
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-2">
+                        <a href="/projects/${p._id}" class="text-decoration-none text-dark hover-primary">${escapeHtml(p.title)}</a>
+                    </h5>
+
+                    <p class="text-muted small flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        ${escapeHtml(p.description)}
+                    </p>
+
+                    <div class="mb-3">
+                        <div class="text-muted small fw-medium mb-1">Required Skills:</div>
+                        <div>${skillsHtml}</div>
+                    </div>
+
+                    <div class="border-top pt-3 mt-auto">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-circle" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                    ${p.owner_name ? p.owner_name[0].toUpperCase() : 'U'}
+                                </div>
+                                <span class="small text-muted text-truncate" style="max-width: 130px;">${escapeHtml(p.owner_name || 'Owner')}</span>
+                            </div>
+                            <a href="/projects/${p._id}" class="small text-primary text-decoration-none fw-semibold">
+                                Details <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </div>
+                        ${actionBtn}
+                    </div>
+                </div>
+            `;
+            projectsGrid.appendChild(card);
+        });
+
+        // Attach request-to-join button events
+        document.querySelectorAll('.btn-request-join').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const pid = btn.getAttribute('data-id');
+                const title = btn.getAttribute('data-title');
+                document.getElementById('modalProjectId').value = pid;
+                document.getElementById('modalProjectTitle').textContent = title;
+                document.getElementById('requestMessage').value = '';
+                const modal = new bootstrap.Modal(document.getElementById('joinRequestModal'));
+                modal.show();
+            });
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Debounced search
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(loadProjects, 350);
+    });
+
+    skillInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(loadProjects, 350);
+    });
+
+    statusSelect.addEventListener('change', loadProjects);
+
+    resetFiltersBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        skillInput.value = '';
+        statusSelect.value = 'all';
+        loadProjects();
+    });
+
+    // Handle modal join request submit
+    const joinForm = document.getElementById('joinRequestForm');
+    const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+    const reqBtnText = document.getElementById('reqBtnText');
+    const reqBtnSpinner = document.getElementById('reqBtnSpinner');
+
+    joinForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pid = document.getElementById('modalProjectId').value;
+        const message = document.getElementById('requestMessage').value.trim();
+
+        modalSubmitBtn.disabled = true;
+        reqBtnText.classList.add('d-none');
+        reqBtnSpinner.classList.remove('d-none');
+
+        try {
+            const res = await apiRequest(`/api/projects/${pid}/request`, 'POST', { message });
+            showToast(res.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('joinRequestModal')).hide();
+            loadProjects();
+        } catch (err) {
+            showToast(err.message || 'Could not send request', 'danger');
+        } finally {
+            modalSubmitBtn.disabled = false;
+            reqBtnText.classList.remove('d-none');
+            reqBtnSpinner.classList.add('d-none');
+        }
+    });
+
+    // Initial load
+    loadProjects();
+});
+</script>
+{% endblock %}

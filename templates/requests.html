@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}Join Requests – TeamFinder{% endblock %}
+
+{% block layout %}
+<div class="app-wrapper">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-heading">Navigation</div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard_page') }}" class="sidebar-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('projects_page') }}" class="sidebar-link">
+                    <i class="bi bi-folder2-open"></i> Browse Projects
+                </a>
+                <a href="{{ url_for('create_project_page') }}" class="sidebar-link">
+                    <i class="bi bi-plus-square"></i> Create Project
+                </a>
+                <a href="{{ url_for('find_teammates_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-search"></i> Find Teammates
+                </a>
+                <a href="{{ url_for('my_teams_page') }}" class="sidebar-link">
+                    <i class="bi bi-microsoft-teams"></i> My Teams
+                </a>
+                <a href="{{ url_for('requests_page') }}" class="sidebar-link active">
+                    <i class="bi bi-envelope-paper"></i> Join Requests
+                </a>
+                <a href="{{ url_for('profile_page') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="app-content">
+        <div class="container-fluid px-0">
+            <!-- Header -->
+            <div class="mb-4">
+                <h3 class="fw-bold text-dark mb-1"><i class="bi bi-envelope-paper text-primary me-2"></i> Join Request Management</h3>
+                <p class="text-muted small">Review incoming peer join requests for your projects and track status of your outgoing applications.</p>
+            </div>
+
+            <!-- Tab Navigation -->
+            <ul class="nav nav-pills mb-4 gap-2" id="requestsTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active px-4 py-2" id="received-tab" data-bs-toggle="pill" data-bs-target="#receivedPane" type="button" role="tab">
+                        <i class="bi bi-inbox me-1"></i> Received Requests <span id="receivedBadge" class="badge bg-danger rounded-pill ms-1 d-none">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link px-4 py-2" id="sent-tab" data-bs-toggle="pill" data-bs-target="#sentPane" type="button" role="tab">
+                        <i class="bi bi-send me-1"></i> Sent Applications
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Panes -->
+            <div class="tab-content" id="requestsTabContent">
+                <!-- Received Requests Pane -->
+                <div class="tab-pane fade show active" id="receivedPane" role="tabpanel">
+                    <div id="receivedLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2 small">Loading received requests...</p>
+                    </div>
+
+                    <div id="receivedList" class="d-flex flex-column gap-3 d-none">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <div id="receivedEmpty" class="card-custom p-5 text-center border-0 d-none">
+                        <div class="stat-icon info mx-auto mb-3">
+                            <i class="bi bi-inbox-fill"></i>
+                        </div>
+                        <h5 class="fw-bold">No Received Requests</h5>
+                        <p class="text-muted small">You currently have no pending or past join requests for your projects.</p>
+                    </div>
+                </div>
+
+                <!-- Sent Requests Pane -->
+                <div class="tab-pane fade" id="sentPane" role="tabpanel">
+                    <div id="sentLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2 small">Loading your sent applications...</p>
+                    </div>
+
+                    <div id="sentList" class="d-flex flex-column gap-3 d-none">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <div id="sentEmpty" class="card-custom p-5 text-center border-0 d-none">
+                        <div class="stat-icon primary mx-auto mb-3">
+                            <i class="bi bi-send"></i>
+                        </div>
+                        <h5 class="fw-bold">No Sent Requests</h5>
+                        <p class="text-muted small">You haven't requested to join any projects yet.</p>
+                        <a href="{{ url_for('projects_page') }}" class="btn btn-outline-custom mx-auto mt-2">Browse Projects</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const receivedList = document.getElementById('receivedList');
+    const receivedLoading = document.getElementById('receivedLoading');
+    const receivedEmpty = document.getElementById('receivedEmpty');
+    const receivedBadge = document.getElementById('receivedBadge');
+
+    const sentList = document.getElementById('sentList');
+    const sentLoading = document.getElementById('sentLoading');
+    const sentEmpty = document.getElementById('sentEmpty');
+
+    async function loadReceived() {
+        receivedLoading.classList.remove('d-none');
+        receivedList.classList.add('d-none');
+        receivedEmpty.classList.add('d-none');
+
+        try {
+            const res = await apiRequest('/api/requests/received');
+            const requests = res.requests || [];
+            
+            const pendingCount = requests.filter(r => r.status === 'Pending').length;
+            if (pendingCount > 0) {
+                receivedBadge.textContent = pendingCount;
+                receivedBadge.classList.remove('d-none');
+            } else {
+                receivedBadge.classList.add('d-none');
+            }
+
+            if (requests.length === 0) {
+                receivedEmpty.classList.remove('d-none');
+                return;
+            }
+
+            receivedList.innerHTML = '';
+            receivedList.classList.remove('d-none');
+
+            requests.forEach(r => {
+                const statusClass = r.status.toLowerCase();
+                let actionsHtml = '';
+                
+                if (r.status === 'Pending') {
+                    if (r.is_full) {
+                        actionsHtml = `
+                            <div class="text-end">
+                                <span class="badge bg-danger-subtle text-danger mb-2 d-block">Team Full (${r.current_team_size}/${r.max_team_size})</span>
+                                <button class="btn btn-sm btn-outline-danger btn-reject" data-id="${r._id}">Reject</button>
+                            </div>
+                        `;
+                    } else {
+                        actionsHtml = `
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button class="btn btn-sm btn-outline-danger btn-reject" data-id="${r._id}">
+                                    <i class="bi bi-x-circle me-1"></i> Reject
+                                </button>
+                                <button class="btn btn-sm btn-success btn-accept" data-id="${r._id}">
+                                    <i class="bi bi-check-circle me-1"></i> Accept & Add to Team
+                                </button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    actionsHtml = `
+                        <span class="badge-status ${statusClass} px-3 py-1">
+                            ${r.status}
+                        </span>
+                    `;
+                }
+
+                let skillsHtml = '';
+                (r.student_skills || []).forEach(s => {
+                    skillsHtml += `<span class="skill-tag" style="font-size:0.75rem;">${escapeHtml(s)}</span>`;
+                });
+
+                const item = document.createElement('div');
+                item.className = 'card-custom p-4 border-0 shadow-sm bg-white';
+                item.innerHTML = `
+                    <div class="row align-items-center g-3">
+                        <div class="col-lg-8">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge bg-primary-subtle text-primary small">Project: ${escapeHtml(r.project_title)}</span>
+                                <span class="text-muted small">&bull; Capacity: ${r.current_team_size}/${r.max_team_size}</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 my-2">
+                                <div class="avatar-circle">
+                                    ${r.student_name ? r.student_name[0].toUpperCase() : 'S'}
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">
+                                        <a href="/profile?user_id=${r.student_id}" class="text-decoration-none text-dark hover-primary">${escapeHtml(r.student_name)}</a>
+                                    </h6>
+                                    <div class="text-muted small">${escapeHtml(r.student_email)} &bull; ${escapeHtml(r.student_department)}</div>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-3 my-2 border">
+                                <div class="small fw-semibold text-muted mb-1">Message from applicant:</div>
+                                <div class="small text-dark">${escapeHtml(r.message || 'No message provided.')}</div>
+                            </div>
+
+                            <div>
+                                <span class="small fw-semibold text-muted me-2">Applicant Skills:</span>
+                                ${skillsHtml || '<span class="text-muted small">None listed</span>'}
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 text-lg-end pt-3 pt-lg-0 border-top border-lg-0">
+                            <div class="text-muted small mb-2">Applied: ${r.created_at ? r.created_at.substring(0, 10) : ''}</div>
+                            ${actionsHtml}
+                        </div>
+                    </div>
+                `;
+                receivedList.appendChild(item);
+            });
+
+            // Bind accept/reject buttons
+            document.querySelectorAll('.btn-accept').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const rid = btn.getAttribute('data-id');
+                    btn.disabled = true;
+                    try {
+                        const res = await apiRequest(`/api/requests/${rid}/accept`, 'POST');
+                        showToast(res.message, 'success');
+                        loadReceived();
+                    } catch (err) {
+                        showToast(err.message || 'Error accepting request', 'danger');
+                        btn.disabled = false;
+                    }
+                });
+            });
+
+            document.querySelectorAll('.btn-reject').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const rid = btn.getAttribute('data-id');
+                    if (confirm('Are you sure you want to reject this request?')) {
+                        btn.disabled = true;
+                        try {
+                            const res = await apiRequest(`/api/requests/${rid}/reject`, 'POST');
+                            showToast(res.message, 'info');
+                            loadReceived();
+                        } catch (err) {
+                            showToast(err.message || 'Error rejecting request', 'danger');
+                            btn.disabled = false;
+                        }
+                    }
+                });
+            });
+
+        } catch (err) {
+            showToast('Failed to load received requests: ' + err.message, 'danger');
+        } finally {
+            receivedLoading.classList.add('d-none');
+        }
+    }
+
+    async function loadSent() {
+        sentLoading.classList.remove('d-none');
+        sentList.classList.add('d-none');
+        sentEmpty.classList.add('d-none');
+
+        try {
+            const res = await apiRequest('/api/requests/sent');
+            const requests = res.requests || [];
+
+            if (requests.length === 0) {
+                sentEmpty.classList.remove('d-none');
+                return;
+            }
+
+            sentList.innerHTML = '';
+            sentList.classList.remove('d-none');
+
+            requests.forEach(r => {
+                const statusClass = r.status.toLowerCase();
+                const item = document.createElement('div');
+                item.className = 'card-custom p-4 border-0 shadow-sm bg-white';
+                item.innerHTML = `
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h5 class="fw-bold mb-0">
+                                    <a href="/projects/${r.project_id}" class="text-decoration-none text-dark hover-primary">${escapeHtml(r.project_title)}</a>
+                                </h5>
+                            </div>
+                            <div class="text-muted small mb-2">
+                                Project Owner: <span class="fw-medium text-dark">${escapeHtml(r.project_owner_name)}</span> &bull; Submitted: ${r.created_at ? r.created_at.substring(0, 10) : ''}
+                            </div>
+                            <div class="p-2 bg-light rounded text-muted small border" style="max-width: 600px;">
+                                "${escapeHtml(r.message)}"
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <span class="badge-status ${statusClass} px-3 py-1 fs-6">
+                                ${r.status}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                sentList.appendChild(item);
+            });
+        } catch (err) {
+            showToast('Failed to load sent requests: ' + err.message, 'danger');
+        } finally {
+            sentLoading.classList.add('d-none');
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Tab change handlers
+    document.getElementById('received-tab').addEventListener('shown.bs.tab', loadReceived);
+    document.getElementById('sent-tab').addEventListener('shown.bs.tab', loadSent);
+
+    // Initial load
+    loadReceived();
+});
+</script>
+{% endblock %}

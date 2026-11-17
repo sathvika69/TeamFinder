@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}TeamFinder – Find Teammates for College Projects{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section text-center text-lg-start">
+    <div class="container py-lg-5">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-semibold mb-3">
+                    <i class="bi bi-stars text-warning"></i> College Collaboration Platform
+                </span>
+                <h1 class="hero-title mb-4">
+                    Find the Perfect Teammates for Your <span class="text-primary" style="background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">College Projects</span>.
+                </h1>
+                <p class="hero-subtitle mb-4">
+                    Stop working alone or struggling to find skilled peers. Connect with college students based on verified technical skills, project interests, and academic goals.
+                </p>
+                <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
+                    {% if current_user %}
+                        <a href="{{ url_for('dashboard_page') }}" class="btn btn-primary-custom btn-lg px-4">
+                            <i class="bi bi-speedometer2 me-2"></i> Go to Dashboard
+                        </a>
+                        <a href="{{ url_for('projects_page') }}" class="btn btn-outline-light btn-lg px-4">
+                            <i class="bi bi-search me-2"></i> Explore Projects
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('register_page') }}" class="btn btn-primary-custom btn-lg px-4">
+                            <i class="bi bi-person-plus me-2"></i> Register as Student
+                        </a>
+                        <a href="{{ url_for('login_page') }}" class="btn btn-outline-light btn-lg px-4">
+                            <i class="bi bi-box-arrow-in-right me-2"></i> Student Login
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="card-custom p-4 shadow-xl" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-lightning-charge-fill text-warning me-2"></i> Platform Live Metrics</h5>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded-3 text-center border">
+                                <div class="fs-2 fw-bold text-primary">{{ total_projects }}</div>
+                                <div class="text-muted small fw-medium">Active Projects</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded-3 text-center border">
+                                <div class="fs-2 fw-bold text-success">{{ total_students }}</div>
+                                <div class="text-muted small fw-medium">Registered Students</div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-circle bg-primary text-white">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-dark small">Intelligent Team Matcher</div>
+                            <div class="text-muted small">Real-time team matching & secure authentication</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features / How it Works -->
+<section class="py-5">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <span class="text-primary fw-bold text-uppercase small tracking-wide">Seamless Experience</span>
+            <h2 class="fw-bold mt-1">How TeamFinder Works</h2>
+            <p class="text-muted mx-auto" style="max-width: 600px;">Connect, collaborate, and form dream project teams in four simple steps.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="card-custom p-4 h-100 text-center border-0 bg-white shadow-sm">
+                    <div class="stat-icon primary mx-auto mb-3">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">1. Build Profile</h5>
+                    <p class="text-muted small mb-0">Highlight your technical stack, department, college, and areas of interest.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card-custom p-4 h-100 text-center border-0 bg-white shadow-sm">
+                    <div class="stat-icon info mx-auto mb-3">
+                        <i class="bi bi-folder-plus"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">2. Publish Ideas</h5>
+                    <p class="text-muted small mb-0">Post your academic or capstone project concept with skill prerequisites & capacity.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card-custom p-4 h-100 text-center border-0 bg-white shadow-sm">
+                    <div class="stat-icon warning mx-auto mb-3">
+                        <i class="bi bi-search-heart"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">3. Discover Peers</h5>
+                    <p class="text-muted small mb-0">Search students with matching competencies or request to join exciting projects.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card-custom p-4 h-100 text-center border-0 bg-white shadow-sm">
+                    <div class="stat-icon success mx-auto mb-3">
+                        <i class="bi bi-check2-circle"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">4. Form & Deliver</h5>
+                    <p class="text-muted small mb-0">Accept join requests, form the project squad, and collaborate productively.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Recently Added Projects Preview -->
+<section class="py-5 bg-light border-top">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-1">Featured Open Projects</h3>
+                <p class="text-muted mb-0">Explore latest collaboration opportunities submitted by college peers.</p>
+            </div>
+            <a href="{{ url_for('projects_page') }}" class="btn btn-outline-custom">
+                View All Projects <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        <div class="row g-4">
+            {% if recent_projects %}
+                {% for project in recent_projects %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card-custom card-interactive p-4 h-100 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge-status open">
+                                <i class="bi bi-record-fill"></i> Open
+                            </span>
+                            <span class="text-muted small"><i class="bi bi-people me-1"></i> Team Size: {{ project.team_size }}</span>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">{{ project.title }}</h5>
+                        <p class="text-muted small flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                            {{ project.description }}
+                        </p>
+                        
+                        <div class="mb-3">
+                            <div class="text-muted small fw-medium mb-1">Required Skills:</div>
+                            <div>
+                                {% for skill in project.skills_required[:4] %}
+                                    <span class="skill-tag">{{ skill }}</span>
+                                {% endfor %}
+                                {% if project.skills_required|length > 4 %}
+                                    <span class="skill-tag text-muted">+{{ project.skills_required|length - 4 }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="border-top pt-3 d-flex justify-content-between align-items-center mt-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-circle" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                    {{ project.owner_name[0]|upper }}
+                                </div>
+                                <span class="small text-muted text-truncate" style="max-width: 110px;">{{ project.owner_name }}</span>
+                            </div>
+                            <a href="{{ url_for('project_details_page', project_id=project._id) }}" class="btn btn-sm btn-outline-custom">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center py-5">
+                    <div class="stat-icon info mx-auto mb-3">
+                        <i class="bi bi-info-circle"></i>
+                    </div>
+                    <h5>No projects available yet</h5>
+                    <p class="text-muted">Be the first to publish a collaborative project idea!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action Banner -->
+<section class="py-5 bg-white border-top">
+    <div class="container text-center py-4">
+        <h2 class="fw-bold mb-3">Ready to Build Your Dream Project Team?</h2>
+        <p class="text-muted mx-auto mb-4" style="max-width: 600px;">
+            Join your fellow students on TeamFinder today. It takes less than 2 minutes to create your profile and get started.
+        </p>
+        {% if not current_user %}
+            <a href="{{ url_for('register_page') }}" class="btn btn-primary-custom btn-lg px-5">
+                Create Free Account
+            </a>
+        {% else %}
+            <a href="{{ url_for('create_project_page') }}" class="btn btn-primary-custom btn-lg px-5">
+                Post a New Project
+            </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
